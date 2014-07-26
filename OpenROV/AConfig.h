@@ -25,7 +25,7 @@
 
 #define HAS_STD_LIGHTS (1)
 #define HAS_STD_CALIBRATIONLASERS (1)
-#define HAS_STD_2X1_THRUSTERS (1)
+#define HAS_STD_2X1_THRUSTERS (0)
 #define HAS_STD_CAMERAMOUNT (1)
 #define HAS_STD_PILOT (1)
 
@@ -35,6 +35,9 @@
 #define MS5803_14BA_I2C_ADDRESS 0x76
 #define HAS_MPU9150 (1)
 #define MPU9150_EEPROM_START 2
+
+//Community:
+#define HAS_2THRUSTERSWITHFINS (1)  //Be sure to disable STD Thrusters and STD Camera Mount when you enable this
 
 #if !(HAS_OROV_CONTROLLERBOARD_25) && !(HAS_STD_CAPE)
 #  error "You must select either standard cape or controllerboard25 in the AConfig.h file as they have predefined pin values required by other libraries."

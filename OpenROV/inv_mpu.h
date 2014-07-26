@@ -41,7 +41,7 @@ int mpu_select_device(int device);
 
 inline void get_ms(long unsigned int *timestamp)
 {
-    *timestamp = millis(); 
+    *timestamp = millis();
 }
 
 //  IMU hardware device defines
@@ -150,4 +150,3 @@ int mpu_register_tap_cb(void (*func)(unsigned char, unsigned char));
 #endif // MPU_MAXIMAL
 
 #endif  /* #ifndef _INV_MPU_H_ */
-

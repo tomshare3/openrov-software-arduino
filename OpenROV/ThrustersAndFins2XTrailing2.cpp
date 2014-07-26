@@ -1,31 +1,37 @@
 #include "AConfig.h"
-#if(HAS_STD_2X1_THRUSTERS)
+#if(HAS_2THRUSTERSWITHFINS)
 #include "Device.h"
 #include "Pin.h"
-#include "Thrusters2X1.h"
+#include "ThrustersAndFins2XTrailing2.h"
 #include "Settings.h"
-#include "Motors.h"
+#include "Motor.h"
 #include "Timer.h"
+#include "openrov_servo.h"
 
-//Motors motors(9, 10, 11);
-//Motors motors(6, 7, 8);
-Motor port_motor(PORT_PIN);
-Motor vertical_motor(VERTICAL_PIN);
-Motor starboard_motor(STARBOARD_PIN);
+Motor port_motor = Motor(PORT_MOTOR_PIN);
+Motor starboard_motor = Motor(STARBOARD_MOTOR_PIN);
+Servo port_fin;
+Servo starboard_fin;
 
+// These are the current and target settings for the servo's controling fins and motors
 int new_p = MIDPOINT;
 int new_s = MIDPOINT;
-int new_v = MIDPOINT;
+int new_p_fin = MIDPOINT;
+int new_s_fin = MIDPOINT;
 int p = MIDPOINT;
-int v = MIDPOINT;
 int s = MIDPOINT;
+int p_fin = MIDPOINT;
+int s_fin = MIDPOINT;
 
-float trg_throttle,trg_yaw,trg_lift;
+// These are the target orientations that ultimately will drive target servo settings
+float trg_throttle,trg_yaw,trg_pitch,trg_roll;
+
+// These are the target control surace setings before 2nd order adustment of roll and yaw
 int trg_motor_power;
+float trg_fin_pitch;
 
 Timer controltime;
 Timer thrusterOutput;
-boolean bypasssmoothing;
 
 #ifdef ESCPOWER_PIN
 bool canPowerESCs = true;
@@ -34,92 +40,55 @@ Pin escpower("escpower", ESCPOWER_PIN, escpower.digital, escpower.out);
 boolean canPowerESCs = false;
 #endif
 
-int smoothAdjustedServoPosition(int target, int current){
-  // if the MIDPOINT is betwen the change requested in velocity we want to go to MIDPOINT first, and right away.
-  if (((current < MIDPOINT) && (MIDPOINT < target)) || ((target < MIDPOINT) && (MIDPOINT < current))){
-    return MIDPOINT;
-  }
-  // if the change is moving us closer to MIDPOINT it is a reduction of power and we can move all the way to the target
-  // in one command
-  if (abs(MIDPOINT-target) < abs(MIDPOINT-current)){
-    return target;
-  }
-  // else, we need to smooth out amp spikes by making a series of incrimental changes in the motors, so only move part of
-  // the way to the target this time.
-  double x = target - current;
+float smoothAdjustedServoPositionPercentage(float target, float current){
+  float x = target - current;
   int sign = (x>0) - (x<0);
-  int adjustedVal = current + sign * (min(abs(target - current), Settings::smoothingIncriment));
-  // skip the deadzone
-  if (sign<0) {
-    return (min(adjustedVal,Settings::deadZone_min));
-  } else if(sign>0){
-    return (max(adjustedVal,Settings::deadZone_max));
-  } else
-    return (adjustedVal);
+  float adjustedVal = current + sign * (min(abs(target - current),  Settings::smoothingIncriment/100.0));
+  return (adjustedVal);
 }
 
 void Thrusters::device_setup(){
   port_motor.reset();
-  vertical_motor.reset();
   starboard_motor.reset();
   thrusterOutput.reset();
   controltime.reset();
-  bypasssmoothing = false;
+  port_fin.attach(PORT_FIN_PIN);
+  starboard_fin.attach(STARBOARD_FIN_PIN);
+
+
   #ifdef ESCPOWER_PIN
     escpower.reset();
     escpower.write(1); //Turn on the ESCs
-
   #endif
 }
 
 void Thrusters::device_loop(Command command){
   if (command.cmp("mtrmod")) {
       port_motor.motor_positive_modifer = command.args[1]/100;
-      vertical_motor.motor_positive_modifer = command.args[2]/100;
       starboard_motor.motor_positive_modifer = command.args[3]/100;
       port_motor.motor_negative_modifer = command.args[4]/100;
-      vertical_motor.motor_negative_modifer = command.args[5]/100;
       starboard_motor.motor_negative_modifer = command.args[6]/100;
   }
   if (command.cmp("rmtrmod")) {
       Serial.print(F("mtrmod:"));
       Serial.print(port_motor.motor_positive_modifer);
       Serial.print (",");
-      Serial.print(vertical_motor.motor_positive_modifer);
+      Serial.print(0);
       Serial.print (",");
       Serial.print(starboard_motor.motor_positive_modifer);
       Serial.print (",");
       Serial.print(port_motor.motor_negative_modifer);
       Serial.print (",");
-      Serial.print(vertical_motor.motor_negative_modifer);
+      Serial.print(0);
       Serial.print (",");
       Serial.print(starboard_motor.motor_negative_modifer);
       Serial.println (";");
   }
 
-  if (command.cmp("go")) {
-      //ignore corrupt data
-      if (command.args[1]>999 && command.args[2] >999 && command.args[3] > 999 && command.args[1]<2001 && command.args[2]<2001 && command.args[3] < 2001) {
-        p = command.args[1];
-        v = command.args[2];
-        s = command.args[3];
-        if (command.args[4] == 1) bypasssmoothing=true;
-      }
-    }
-
   if (command.cmp("port")) {
       //ignore corrupt data
       if (command.args[1]>999 && command.args[1]<2001) {
         p = command.args[1];
-        if (command.args[2] == 1) bypasssmoothing=true;
-      }
-  }
-
-  if (command.cmp("vertical")) {
-      //ignore corrupt data
-      if (command.args[1]>999 && command.args[1]<2001) {
-        v = command.args[1];
-        if (command.args[2] == 1) bypasssmoothing=true;
       }
   }
 
@@ -127,9 +96,22 @@ void Thrusters::device_loop(Command command){
       //ignore corrupt data
       if (command.args[1]>999 && command.args[1]<2001) {
         s = command.args[1];
-        if (command.args[2] == 1) bypasssmoothing=true;
       }
   }
+
+if (command.cmp("portfin")) {
+    //ignore corrupt data
+    if (command.args[1]>999 && command.args[1]<2001) {
+      p_fin = command.args[1];
+    }
+}
+
+if (command.cmp("starboardfin")) {
+    //ignore corrupt data
+    if (command.args[1]>999 && command.args[1]<2001) {
+      s_fin = command.args[1];
+    }
+}
 
   if (command.cmp("thro") || command.cmp("yaw")){
     if (command.cmp("thro")){
@@ -137,15 +119,14 @@ void Thrusters::device_loop(Command command){
         trg_throttle = command.args[1]/100.0;
       }
     }
-
-    // The code below was intended to correct for the total possible range,
-    // and since the reverse direction was using a 2x modified, you only
-    // have 1/2 the range.
+    // The code below spreads the throttle spectrum over the possible range
+    // of the motor. Not sure this belongs here or should be placed with
+    // deadzon calculation in the motor code.
     if (trg_throttle>=0){
-      p = 1500 + 500*trg_throttle;
+      p = 1500 + (500/abs(port_motor.motor_positive_modifer))*trg_throttle;
       s = p;
     } else {
-      p = 1500 + 250*trg_throttle;
+      p = 1500 + (500/abs(port_motor.motor_negative_modifer))*trg_throttle;
       s = p;
     }
     trg_motor_power = s;
@@ -175,14 +156,46 @@ void Thrusters::device_loop(Command command){
 
   }
 
-  if (command.cmp("lift")){
+if (command.cmp("pitch") || command.cmp("roll")){
+  if (command.cmp("pitch")){
     if (command.args[1]>=-100 && command.args[1]<=100) {
-      trg_lift = command.args[1]/100.0;
-      v = 1500 + 500*trg_lift;
+      trg_pitch = command.args[1]/100.0;
     }
   }
+  // set the targets for control services (fin) based on pitch target
+  s_fin = trg_pitch;
+  p_fin = trg_pitch;
+  trg_fin_pitch = trg_pitch;
 
+  if (command.cmp("roll")) {
+      //ignore corrupt data
+      if (command.args[1]>=-100 && command.args[1]<=100) { //percent of max turn
+        trg_roll = command.args[1]/100.0;
+        //actual roll needs to be bounded by the amount of response left
+        //in the control surface after the pitch command.  IE, for max roll
+        //the pilot needs to have zero pitch.  This is a point of contention
+        //and we could change it to simply drive the controls to max deflection
+        //independently and ignore the intended roll/pitch outcome as independent
+        //controls.
+        float remaining_roll = 1 - abs(trg_pitch);
 
+        if (trg_roll >=0) {
+          if (trg_fin_pitch > 0) {
+            trg_roll = min(remaining_roll,trg_roll);
+          }
+        } else {
+          if (trg_fin_pitch  < 0) {
+            trg_roll = max(-remaining_roll,trg_roll);
+          }
+        }
+
+        p_fin = trg_fin_pitch + trg_roll;
+        s_fin = trg_fin_pitch - trg_roll;
+
+      }
+  }
+
+}
   #ifdef ESCPOWER_PIN
     else if (command.cmp("escp")) {
       escpower.write(command.args[1]); //Turn on the ESCs
@@ -193,38 +206,32 @@ void Thrusters::device_loop(Command command){
   #endif
     else if (command.cmp("start")) {
       port_motor.reset();
-      vertical_motor.reset();
       starboard_motor.reset();
     }
     else if (command.cmp("stop")) {
       port_motor.stop();
-      vertical_motor.reset();
-      starboard_motor.reset();
+      starboard_motor.stop();
     }
-    #ifdef ESCPOWER_PIN
-    else if ((command.cmp("mcal")) && (canPowerESCs)){
-      Serial.println(F("log:Motor Callibration Staring;"));
-      //Experimental. Add calibration code here
-      Serial.println(F("log:Motor Callibration Complete;"));
-  }
-    #endif
+
   //to reduce AMP spikes, smooth large power adjustments out. This incirmentally adjusts the motors and servo
   //to their new positions in increments.  The incriment should eventually be adjustable from the cockpit so that
   //the pilot could have more aggressive response profiles for the ROV.
   if (controltime.elapsed (50)) {
-    if (p!=new_p || v!=new_v || s!=new_s) {
-      new_p = smoothAdjustedServoPosition(p,new_p);
-      new_v = smoothAdjustedServoPosition(v,new_v);
-      new_s = smoothAdjustedServoPosition(s,new_s);
-      if (bypasssmoothing)
-      {
-        new_p=p;
-        new_v=v;
-        new_s=s;
-        bypasssmoothing = false;
-      }
+    if (p_fin!=new_p_fin || s_fin!=new_s_fin) {
+      new_p_fin = smoothAdjustedServoPositionPercentage(p_fin,new_p_fin);
+      new_s_fin = smoothAdjustedServoPositionPercentage(s_fin,new_s_fin);
+
+      //Probably should move the raw servo behind a fin abstraction.  Especially if we need a bias to get
+      //to neutral fin deflection.
+      port_fin.writeMicroseconds(constrain(MIDPOINT+(500*new_p_fin),1000,2000));
+      starboard_fin.writeMicroseconds(constrain(MIDPOINT+500*new_s_fin,1000,2000));
+    }
+
+    //intentionally removed smoothing the thrust adjustments as that is handled inside the ESCs
+    if (p!=new_p || s!=new_s) {
+      new_p = p;
+      new_s = s;
       port_motor.goms(new_p);
-      vertical_motor.goms(new_v);
       starboard_motor.goms(new_s);
     }
 
@@ -237,17 +244,23 @@ void Thrusters::device_loop(Command command){
     Serial.print(F("motors:"));
     Serial.print(new_p);
     Serial.print(',');
-    Serial.print(new_v);
-    Serial.print(',');
     Serial.print(new_s);
+    Serial.println(';');
+    Serial.print(F("elevons:"));
+    Serial.print(port_fin.readMicroseconds());
+    Serial.print(',');
+    Serial.print(starboard_fin.readMicroseconds());
     Serial.println(';');
 
     Serial.print(F("mtarg:"));
     Serial.print(p);
     Serial.print(',');
-    Serial.print(v);
-    Serial.print(',');
     Serial.print(s);
+    Serial.println(';');
+    Serial.print(F("elevtarg:"));
+    Serial.print(p_fin);
+    Serial.print(',');
+    Serial.print(s_fin);
     Serial.println(';');
 
   }

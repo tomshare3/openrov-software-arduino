@@ -68,28 +68,28 @@ void readTemp(){
   float analogTempRead = analogRead(temppin);
 
   float volt = mapf(analogTempRead*1.0,0,1024,0,5.0); // change 4: 1024.0, otherwise will calc integer value!!
-  celsiusTempRead = (volt-.4)*51.28; 
+  celsiusTempRead = (volt-.4)*51.28;
 }
 
 float readCurrent(int pin){
   int voltage = analogRead(pin);
-  
+
   //Serial.print(voltage);
-  return mapf(voltage,0,1023,0,10); 
+  return mapf(voltage,0,1023,0,10);
 }
 
 float read20Volts(int pin){
   int voltage = analogRead(pin);
-  
+
   //Serial.print(voltage);
-  return mapf(voltage,0,1023,0,20); 
+  return mapf(voltage,0,1023,0,20);
 }
 
 float readBrdCurrent(int pin){
   int voltage = analogRead(pin);
-  
+
   //Serial.print(voltage);
-  return mapf(voltage,0,1023,0,2); 
+  return mapf(voltage,0,1023,0,2);
 }
 
 long readVcc() {
@@ -103,17 +103,17 @@ long readVcc() {
     ADMUX = _BV(MUX3) | _BV(MUX2);
   #else
     ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-  #endif  
- 
+  #endif
+
   delay(2); // Wait for Vref to settle
   ADCSRA |= _BV(ADSC); // Start conversion
   while (bit_is_set(ADCSRA,ADSC)); // measuring
- 
-  uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH  
+
+  uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH
   uint8_t high = ADCH; // unlocks both
- 
+
   long result = (high<<8) | low;
- 
+
   result = 1125300L / result; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
   return result; // Vcc in millivolts
 }
@@ -124,33 +124,33 @@ void Controller25::device_setup(){
   statustime2.reset();
   onesecondtimer.reset();
 
-  // initialize all the readings to 0: 
+  // initialize all the readings to 0:
   for (int thisReading = 0; thisReading < numReadings; thisReading++)
-    readings[thisReading] = 0;     
+    readings[thisReading] = 0;
 }
 
 void Controller25::device_loop(Command command){
 
   if (time.elapsed (100)) {
     // subtract the last reading:
-    total= total - readings[index];         
-    // read from the sensor:  
+    total= total - readings[index];
+    // read from the sensor:
     readings[index] = readBrdCurrent(A0);
 
     // add the reading to the total:
-    total= total + readings[index];       
-    // advance to the next position in the array:  
-    index = index + 1;                    
+    total= total + readings[index];
+    // advance to the next position in the array:
+    index = index + 1;
 
     // if we're at the end of the array...
-    if (index >= numReadings)              
-      // ...wrap around to the beginning: 
-      index = 0;                           
+    if (index >= numReadings)
+      // ...wrap around to the beginning:
+      index = 0;
 
     // calculate the average:
     average = total / numReadings;
-  } 
-  
+  }
+
   if (onesecondtimer.elapsed (1000)){
     readTemp();
     Serial.print(F("BRDT:"));
@@ -179,8 +179,8 @@ void Controller25::device_loop(Command command){
     Serial.print(';');
     Serial.print(F("AVCC:"));
     Serial.print(readVcc());
-    Serial.println(';');    
-    
+    Serial.println(';');
+
   }
 
   // send voltage and current
@@ -189,7 +189,7 @@ void Controller25::device_loop(Command command){
     capedata::IOUT = readBrdCurrent(A0);
     capedata::FMEM = freeMemory();
 //    capedata::ATMP = GetTemp();
-    capedata::UTIM = millis(); 
-  }  
+    capedata::UTIM = millis();
+  }
 }
 #endif

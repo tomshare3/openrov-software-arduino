@@ -82,6 +82,10 @@ Settings settings;
   MS5803_14BA DeapthSensor;
 #endif
 
+#if(HAS_2THRUSTERSWITHFINS)
+  #include "ThrustersAndFins2XTrailing2.h"
+  Thrusters thrusters;
+#endif
 
 Command cmd;
 
@@ -175,7 +179,3 @@ ISR(WDT_vect)
   EEPROM.write(0,1);         // write a "1" to the first byte to indicate the data in second byte is valid and the ISR triggered properly
   while(true);               // triggers the second watchdog timeout for a reset
 }
-
-
-
-
