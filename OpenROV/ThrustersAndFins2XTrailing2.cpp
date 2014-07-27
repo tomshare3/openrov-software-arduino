@@ -16,7 +16,7 @@ Servo starboard_fin;
 // These are the current and target settings for the servo's controling fins and motors
 int new_p = MIDPOINT;
 int new_s = MIDPOINT;
-flotat new_p_fin = MIDPOINT;
+float new_p_fin = MIDPOINT;
 float new_s_fin = MIDPOINT;
 int p = MIDPOINT;
 int s = MIDPOINT;
