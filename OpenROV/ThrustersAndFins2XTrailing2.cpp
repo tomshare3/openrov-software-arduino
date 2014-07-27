@@ -16,12 +16,12 @@ Servo starboard_fin;
 // These are the current and target settings for the servo's controling fins and motors
 int new_p = MIDPOINT;
 int new_s = MIDPOINT;
-int new_p_fin = MIDPOINT;
-int new_s_fin = MIDPOINT;
+flotat new_p_fin = MIDPOINT;
+float new_s_fin = MIDPOINT;
 int p = MIDPOINT;
 int s = MIDPOINT;
-int p_fin = MIDPOINT;
-int s_fin = MIDPOINT;
+float p_fin = MIDPOINT;
+float s_fin = MIDPOINT;
 
 // These are the target orientations that ultimately will drive target servo settings
 float trg_throttle,trg_yaw,trg_pitch,trg_roll;
@@ -41,6 +41,7 @@ boolean canPowerESCs = false;
 #endif
 
 float smoothAdjustedServoPositionPercentage(float target, float current){
+  return target; //intentional disable
   float x = target - current;
   int sign = (x>0) - (x<0);
   float adjustedVal = current + sign * (min(abs(target - current),  Settings::smoothingIncriment/100.0));
