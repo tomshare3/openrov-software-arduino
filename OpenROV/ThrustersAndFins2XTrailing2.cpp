@@ -224,8 +224,8 @@ if (command.cmp("pitch") || command.cmp("roll")){
 
       //Probably should move the raw servo behind a fin abstraction.  Especially if we need a bias to get
       //to neutral fin deflection.
-      port_fin.writeMicroseconds(constrain(MIDPOINT+(500*new_p_fin),1000,2000));
-      starboard_fin.writeMicroseconds(constrain(MIDPOINT+500*new_s_fin,1000,2000));
+      port_fin.writeMicroseconds(constrain(MIDPOINT+(900*new_p_fin),600,2400));
+      starboard_fin.writeMicroseconds(constrain(MIDPOINT+900*new_s_fin,600,2400));
     }
 
     //intentionally removed smoothing the thrust adjustments as that is handled inside the ESCs
