@@ -86,6 +86,14 @@ void Thrusters::device_loop(Command command){
       Serial.println (";");
   }
 
+  if (command.cmp("go")) {   //still needed for callibration
+      //ignore corrupt data
+      if (command.args[1]>999 && command.args[2] >999 && command.args[3] > 999 && command.args[1]<2001 && command.args[2]<2001 && command.args[3] < 2001) {
+        p = command.args[1];
+        s = command.args[3];
+      }
+    }
+
   if (command.cmp("port")) {
       //ignore corrupt data
       if (command.args[1]>999 && command.args[1]<2001) {
