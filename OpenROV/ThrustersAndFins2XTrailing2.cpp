@@ -172,6 +172,10 @@ if (command.cmp("pitch") || command.cmp("roll")){
       //ignore corrupt data
       if (command.args[1]>=-100 && command.args[1]<=100) { //percent of max turn
         trg_roll = command.args[1]/100.0;
+        //If the elevons are at the back of the ROV, they need to be reversed
+        //to get the target roll.
+        trg_roll = trg_roll * -1;
+
         //actual roll needs to be bounded by the amount of response left
         //in the control surface after the pitch command.  IE, for max roll
         //the pilot needs to have zero pitch.  This is a point of contention
@@ -225,7 +229,10 @@ if (command.cmp("pitch") || command.cmp("roll")){
       //Probably should move the raw servo behind a fin abstraction.  Especially if we need a bias to get
       //to neutral fin deflection.
       port_fin.writeMicroseconds(constrain(MIDPOINT+(900*new_p_fin),600,2400));
-      starboard_fin.writeMicroseconds(constrain(MIDPOINT+900*new_s_fin,600,2400));
+
+      //If the servo's are mounted as mirror images, you will need to reverse on
+      //of the servos.  That is why we are multiplying by -1;
+      starboard_fin.writeMicroseconds(constrain(MIDPOINT+900*new_s_fin*-1,600,2400));
     }
 
     //intentionally removed smoothing the thrust adjustments as that is handled inside the ESCs
