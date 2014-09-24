@@ -5,6 +5,7 @@
 #include "Pin.h"
 #include "Pilot.h"
 #include "Timer.h"
+#inculde "PID_v1.h"
 
 Timer pilotTimer;
 Timer deadmanSwitchTimer;
@@ -33,6 +34,16 @@ bool blinkstate = false;
 int depth_deadband = 4; // +/- cm
 int heading_deadband = 4;  // +/i degrees
 
+//Define Variables we'll be connecting to
+double Setpoint, Input, Output;
+
+//Define the aggressive and conservative Tuning Parameters
+double aggKp=4, aggKi=0.2, aggKd=1;
+double consKp=1, consKi=0.05, consKd=0.25;
+
+//Specify the links and initial tuning parameters
+PID myPID(&Input, &Output, &Setpoint, consKp, consKi, consKd, DIRECT);
+
 
 
 void Pilot::device_setup(){
@@ -40,6 +51,10 @@ void Pilot::device_setup(){
   deadmanSwitchTimer.reset();
   blinklightTimer.reset();
   Serial.println(F("log:pilot setup complete;"));
+  //turn the PID on
+  myPID.SetOutputLimits(-1.0,1.0);
+  myPID.SetSampleTime(50);
+  myPID.SetMode(AUTOMATIC);
 }
 
 
@@ -179,51 +194,37 @@ void Pilot::device_loop(Command command){
         // Code for hold mode here
         hdg = navdata::HDGD;
 
-        // Calculate heading error
-
-        hdg_Error = hdg - tgt_Hdg;
-
-        if (hdg_Error > 180)
+        if (hdg > 180)
         {
-        hdg_Error = hdg_Error - 360;
+        hdg = hdg - 360;
         }
 
-        if (hdg_Error < -179)
+        if (hdg < -179)
         {
-        hdg_Error = hdg_Error + 360;
+        hdg = hdg + 360;
         }
 
-        // Run error accumulator (integrator)
-        hdg_Error_Integral = hdg_Error_Integral + hdg_Error;
+        Input = hdg;
 
-        // Calculator motor outputs
-        raw_yaw = -1 * hdg_Error * heading_loop_Gain;
 
-        // raw_Left = raw_Left - (hdg_Error_Integral / integral_Divisor);
-        // raw_Right = raw_Right + (hdg_Error_Integral / integral_Divisor);
+        double gap = abs(Setpoint-Input); //distance away from setpoint
+        if(gap<10)
+        {  //we're close to setpoint, use conservative tuning parameters
+          myPID.SetTunings(consKp, consKi, consKd);
+        }
+        else
+        {
+           //we're far from setpoint, use aggressive tuning parameters
+           myPID.SetTunings(aggKp, aggKi, aggKd);
+        }
+
+        myPID.Compute();
 
         // Constrain and output to motors
 
-        yaw = constrain(raw_yaw, -50, 50);
-        Serial.println(F("log:hold pushing command;"));
-        Serial.print(F("p_er:"));
-        Serial.print(hdg_Error);
-        Serial.println(';');
+        int argsToSend[] = {1,Output}; //include number of parms as last parm
+        command.pushCommand("yaw",argsToSend);
 
-        if (abs(hdg_Error) > heading_deadband){
-          //start the motor with least power
-          if (hdg_Error > 0) {
-            hdg_Error -=heading_deadband;
-          } else {
-            hdg_Error +=heading_deadband;
-          }
-
-          int argsToSend[] = {1,yaw}; //include number of parms as last parm
-          command.pushCommand("yaw",argsToSend);
-        } else {
-          int argsToSend[] = {1,0}; //include number of parms as last parm
-          command.pushCommand("yaw",argsToSend);
-        }
       }
 
 
