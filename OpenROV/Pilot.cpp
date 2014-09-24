@@ -5,7 +5,7 @@
 #include "Pin.h"
 #include "Pilot.h"
 #include "Timer.h"
-#inculde "PID_v1.h"
+#include "PID_v1.h"
 
 Timer pilotTimer;
 Timer deadmanSwitchTimer;
