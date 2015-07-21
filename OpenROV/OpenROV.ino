@@ -32,6 +32,21 @@ Settings settings;
   Lights lights;
 #endif
 
+#if(HAS_STD_ADCTEST)
+  #include "Adctest.h"
+  Adctest adctest;
+#endif
+
+#if(HAS_STD_DHTdev)
+  #include "DHTdev.h"
+  DHTdev dhtdev;
+#endif
+
+#if(HAS_STD_THERMO)
+  #include "Thermo.h"
+  Thermo thermo;
+#endif
+
 #if(HAS_STD_CALIBRATIONLASERS)
   #include "CalibrationLaser.h"
   CalibrationLaser calibrationLaser;
@@ -73,30 +88,18 @@ Settings settings;
   MPU9150 IMU;
 #endif
 
-#if(HAS_MS5803_XXBA)
-  #define DEPTH_ENABLED 1
-  #include "MS5803_XXBA.h"
+#if(HAS_MS5803_14BA)
+  #define DEAPTH_ENABLED 1
+  #include "MS5803_14BA.h"
   #include <Wire.h> //required to force the Arduino IDE to include the library in the path for the I2C code
   #include <SPI.h> //required to force the Arduino IDE to include the library in the path for the SPI code
-  MS5803_XXBA DepthSensor;
+  MS5803_14BA DeapthSensor;
 #endif
 
 #if(DEADMANSWITCH_ON)
   #include "DeadManSwitch.h"
   DeadmanSwitch DMS;
 #endif
-
-#if(HAS_BNO055)
-  #define COMPASS_ENABLED 1
-  #define GYRO_ENABLED 1
-  #define ACCELEROMETER_ENABLED 1
-  #include "BNO055.h"
-  #include <Wire.h> //required to force the Arduino IDE to include the library in the path for the I2C code
-  BNO055 IMU2;
-#endif
-
-// include plugins
-#include "PluginConfig.h"
 
 Command cmd;
 

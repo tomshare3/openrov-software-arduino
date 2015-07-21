@@ -12,9 +12,11 @@
 #define CAMERA_MOUNT_1_AXIS_CAPABLE 3
 #define COMPASS_CAPABLE 4
 #define ORIENTATION_CAPABLE 5
-#define DEPTH_CAPABLE 6
+#define DEAPTH_CAPABLE 6
 
-
+#define ADCTEST_CAPABLE 7
+#define DHTdev_CAPABLE 8
+#define THERMO_CAPABLE 9
 
 #define MAX_DEVICES 15
 // Be sure to initialize any storage variables added to these shared data classes in the device.cpp file.
@@ -26,7 +28,7 @@
 class navdata{
   public:
     static double HDGD; //Compass heading in degrees
-    static float DEEP; //Depth in meters
+    static float DEAP; //Depth in meters
     static float ROLL; //Roll in degrees
     static float PITC; //Pitch in degrees
     static float YAW; //Yaw in degrees
@@ -44,7 +46,6 @@ class capedata{
     static double FMEM; //Free memory on the Arduino in bytes
     static double VOUT; //Voltage as meassed at the cape in milli-volts
     static double IOUT; //Current measured in to the cape in milli-amps.
-    static double BTTI; //Current draw from both battery banks
     static double ATMP; //Arduino internal temp in Cellcius (should not get above ~86)
     static String VER;  //version number of the OpenRov firmware
     static double UTIM; //up-time since Arduino was started in milliseconds
