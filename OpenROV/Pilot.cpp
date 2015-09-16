@@ -14,7 +14,7 @@ int hdg = 0;
 int hdg_Error;
 int raw_Left, raw_Right;
 int left, right;  // motor outputs in microseconds, +/-500
-float heading_loop_Gain = 1.0;
+float heading_loop_Gain = 0.5;
 float depth_hold_loop_gain = 0.6;
 int integral_Divisor = 100;
 long hdg_Error_Integral = 0;
@@ -104,7 +104,7 @@ void Pilot::device_loop(Command command){
     if( command.cmp("deptlon")){
       _depthHoldEnabled = true;
       if(command.args[0]==0){
-        _depthHoldTarget = navdata::DEEP*100;  //casting to cm
+        _depthHoldTarget = navdata::DEAP*100;  //casting to cm
       } else {
         _depthHoldTarget = command.args[1];
       }
@@ -143,8 +143,8 @@ void Pilot::device_loop(Command command){
 
       if (_depthHoldEnabled)
       {
-        depth = navdata::DEEP*100;
-        depth_Error = target_depth-depth;  //positive error = positive lift = go deeper.
+        depth = navdata::DEAP*100;
+        depth_Error = target_depth-depth;  //positive error = positive lift = go deaper.
 
         raw_lift = (float)depth_Error * depth_hold_loop_gain;
         lift = constrain(raw_lift, -100, 100);
